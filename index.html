@@ -3,62 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>超市生存：華語初級版 (里程碑強化)</title>
+    <title>超市生存：華語單字大挑戰 終極教學版</title>
     <style>
         :root { --gold: #FFD700; --red: #FF4444; --blue: #00D2FF; }
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'PingFang TC', sans-serif; touch-action: none; }
-        
-        /* 震動特效：效果顯著 */
-        @keyframes extremeShake {
-            0% { transform: translate(0,0); }
-            10% { transform: translate(-8px, -8px); }
-            30% { transform: translate(8px, 5px); }
-            50% { transform: translate(-5px, 8px); }
-            70% { transform: translate(5px, -5px); }
-            90% { transform: translate(-2px, 2px); }
-            100% { transform: translate(0,0); }
-        }
-        .shake-active { animation: extremeShake 0.5s ease-in-out; }
-
-        #gameContainer { position: relative; width: 100vw; height: 100vh; max-width: 500px; margin: 0 auto; background: #222; overflow: hidden; }
+        body { margin: 0; background: #111; overflow: hidden; font-family: sans-serif; touch-action: none; }
+        #gameContainer { position: relative; width: 100vw; height: 100vh; max-width: 500px; margin: 0 auto; background: #222; overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
         canvas { display: block; width: 100%; height: 100%; }
         
-        /* UI 層級 */
-        #uiLayer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
-        .stats { display: flex; justify-content: space-between; padding: 15px; color: white; font-size: 22px; font-weight: bold; }
+        #uiLayer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .stats { display: flex; justify-content: space-between; padding: 15px; color: white; font-size: 20px; font-weight: bold; text-shadow: 2px 2px 4px #000; }
         
         #questionBox { 
-            background: rgba(0, 0, 0, 0.85); border: 4px solid var(--gold); border-radius: 20px;
-            margin: 5px 15px; padding: 15px; text-align: center; color: var(--gold);
+            background: rgba(0, 0, 0, 0.9); border: 3px solid var(--gold); border-radius: 15px;
+            margin: 5px 15px; padding: 18px; text-align: center; color: var(--gold);
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.3);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        .q-main { font-size: 50px; font-weight: bold; display: block; }
-
-        /* 彩色恭喜文字 UI */
-        #milestonePop {
-            position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%) scale(0);
-            width: 90%; text-align: center; z-index: 50; pointer-events: none;
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        #milestonePop.show { transform: translate(-50%, -50%) scale(1.2); }
-        .pop-text { font-size: 48px; font-weight: 900; color: #00FF00; text-shadow: 0 0 20px #000, 0 0 10px #FFF; -webkit-text-stroke: 1px #000; }
-        .pop-sub { font-size: 24px; color: #FFF; display: block; background: rgba(0,0,0,0.5); border-radius: 10px; margin-top: 10px; }
-
-        .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 100; }
+        .q-main { font-size: 54px; font-weight: bold; display: block; }
+        .q-sub { font-size: 27px; color: #00FF00; display: block; min-height: 33px; }
+        
+        .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; z-index: 100; pointer-events: auto; }
         button { background: var(--red); color: white; border: none; padding: 15px 50px; font-size: 22px; border-radius: 50px; cursor: pointer; margin-top: 20px; box-shadow: 0 5px 0 #900; }
+        button:active { transform: translateY(3px); box-shadow: none; }
         .hidden { display: none !important; }
-        #flash { position: absolute; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 5; }
+        #flash { position: absolute; inset: 0; background: white; opacity: 0; pointer-events: none; }
+
+        /* 新增：畫面震動動畫特效 */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+        .shake-active { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
     </style>
 </head>
 <body>
 
 <div id="gameContainer">
     <canvas id="gameCanvas"></canvas>
-    
-    <div id="milestonePop">
-        <div id="popTitle" class="pop-text">太強了！</div>
-        <div id="popDesc" class="pop-sub">難度提升：殭屍變大！</div>
-    </div>
-
     <div id="uiLayer">
         <div class="stats">
             <div id="lives">❤️❤️❤️❤️❤️</div>
@@ -66,16 +56,16 @@
         </div>
         <div id="questionBox" class="hidden">
             <span id="qMain" class="q-main">---</span>
-            <span id="qSub" style="font-size: 22px; color: #0f0; display: block;">---</span>
+            <span id="qSub" class="q-sub">---</span>
         </div>
+        <div id="statusIcons" style="position: absolute; bottom: 20px; left: 20px; display: flex; gap: 10px;"></div>
     </div>
-    
     <div id="flash"></div>
 
     <div id="startScreen" class="overlay">
-        <h1 style="font-size: 45px; color: var(--red); margin: 0;">🧟 殭屍超市</h1>
-        <h2 style="font-size: 20px;">華語初級詞彙生存戰</h2>
-        <p style="padding: 20px; text-align: center;">認讀單字並閃避殭屍！<br>挑戰高分開啟隱藏難度！</p>
+        <h1 style="font-size: 45px; color: var(--red); margin-bottom: 0;">🧟 殭屍超市</h1>
+        <h2 style="margin-top: 0; font-size: 18px;">華語初級詞彙生存戰</h2>
+        <p style="padding: 0 40px; line-height: 1.6;">閃避殭屍！<br>注意：畫面上會有<b>錯誤單字</b>干擾！<br>請確實選擇正確的目標！</p>
         <button id="startBtn">進入超市</button>
     </div>
 
@@ -87,6 +77,7 @@
 </div>
 
 <script>
+/** 詞彙資料 **/
 const vocabList = [
     { hanzi: '蘋果', pinyin: 'píng guǒ', emoji: '🍎' },
     { hanzi: '牛奶', pinyin: 'niú nǎi', emoji: '🥛' },
@@ -99,47 +90,86 @@ const vocabList = [
 ];
 
 let audioCtx;
-function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
-function speak(t) { if('speechSynthesis' in window) { const u = new SpeechSynthesisUtterance(t); u.lang='zh-TW'; u.rate=0.9; window.speechSynthesis.speak(u); }}
-
-function playEffect(freq, duration, type='sine') {
-    if(!audioCtx) return;
-    const osc = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    osc.type = type; osc.connect(g); g.connect(audioCtx.destination);
-    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(freq*2, audioCtx.currentTime + duration);
-    g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-    osc.start(); osc.stop(audioCtx.currentTime + duration);
+function initAudio() {
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch(e) { console.log("Audio API not supported"); }
 }
 
-/** 遊戲變數 **/
+function speakWord(text, clearQueue = false) {
+    if ('speechSynthesis' in window) {
+        if (clearQueue) window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'zh-TW';
+        utterance.rate = 0.85;
+        window.speechSynthesis.speak(utterance);
+    }
+}
+
+function playSound(type) {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    
+    if (type === 'correct') {
+        osc.frequency.setValueAtTime(523, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+    } else if (type === 'hit') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+    } else if (type.startsWith('m')) {
+        // 新增：里程碑專屬連擊升音 (m50, m100, m150)
+        const notes = {
+            'm50': [523, 659, 784],
+            'm100': [523, 659, 784, 1046],
+            'm150': [523, 659, 784, 1046, 1318]
+        }[type];
+        
+        notes.forEach((f, i) => {
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.connect(g); g.connect(audioCtx.destination);
+            o.frequency.setValueAtTime(f, audioCtx.currentTime + i*0.1);
+            g.gain.setValueAtTime(0.1, audioCtx.currentTime + i*0.1);
+            g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i*0.1 + 0.3);
+            o.start(audioCtx.currentTime + i*0.1);
+            o.stop(audioCtx.currentTime + i*0.1 + 0.3);
+        });
+    }
+}
+
+/** 遊戲核心 **/
 let canvas, ctx, width, height, laneWidth;
-let gameState = 'start', score = 0, lives = 5, baseSpeed = 4.5;
-let currentQ = null, gameMode = 0;
-let player = { lane: 1, size: 0, y: 0 };
+let gameState = 'start', score = 0, lives = 5, speed = 4, baseSpeed = 4, spawnTimer = 0;
+let currentQ = null, gameMode = 0, lastMilestone = 0;
+let player = { lane: 1, y: 0, size: 50, shield: false, magnetTimer: 0 };
 let entities = [], particles = [];
-let milestones = [30, 50, 100, 150];
-let currentMilestoneIdx = 0;
 
 function init() {
     canvas = document.getElementById('gameCanvas');
     ctx = canvas.getContext('2d');
     resize();
     window.addEventListener('resize', resize);
-    document.getElementById('startBtn').onclick = () => { initAudio(); startGame(); };
-    document.getElementById('restartBtn').onclick = () => startGame();
     
-    // 控制
+    document.getElementById('startBtn').addEventListener('click', () => { initAudio(); startGame(); });
+    document.getElementById('restartBtn').addEventListener('click', () => { startGame(); });
+
     window.onkeydown = e => { if(e.key==='ArrowLeft') move(-1); if(e.key==='ArrowRight') move(1); };
-    let sx = 0;
-    canvas.ontouchstart = e => sx = e.touches[0].clientX;
-    canvas.ontouchend = e => {
-        let dx = e.changedTouches[0].clientX - sx;
-        if(Math.abs(dx) > 20) move(dx > 0 ? 1 : -1);
+    let startX = 0;
+    canvas.addEventListener('touchstart', e => startX = e.touches[0].clientX);
+    canvas.addEventListener('touchend', e => {
+        let diff = e.changedTouches[0].clientX - startX;
+        if(Math.abs(diff) > 30) move(diff > 0 ? 1 : -1);
         else move(e.changedTouches[0].clientX < width/2 ? -1 : 1);
-    };
-    requestAnimationFrame(loop);
+    });
+
+    requestAnimationFrame(gameLoop);
 }
 
 function resize() {
@@ -147,155 +177,192 @@ function resize() {
     height = document.getElementById('gameContainer').clientHeight;
     canvas.width = width; canvas.height = height;
     laneWidth = width / 3;
-    player.y = height - 130;
+    player.y = height - 120;
     player.size = laneWidth * 0.55;
 }
 
-function move(d) { player.lane = Math.max(0, Math.min(2, player.lane + d)); }
+function move(dir) { player.lane = Math.max(0, Math.min(2, player.lane + dir)); }
 
 function startGame() {
-    score = 0; lives = 5; baseSpeed = 4.5; entities = []; currentMilestoneIdx = 0;
-    player.lane = 1;
-    document.getElementById('score').innerText = score;
+    score = 0; lives = 5; baseSpeed = 4; speed = 4; lastMilestone = 0;
+    entities = []; particles = [];
+    player.lane = 1; player.shield = false; player.magnetTimer = 0;
     document.getElementById('lives').innerText = '❤️'.repeat(5);
+    document.getElementById('score').innerText = score;
     document.querySelectorAll('.overlay').forEach(o => o.classList.add('hidden'));
     document.getElementById('questionBox').classList.remove('hidden');
     gameState = 'playing';
+    
+    speakWord("遊戲開始", true); 
     newQuestion();
+}
+
+// 新增：檢查里程碑機制
+function checkMilestone() {
+    let container = document.getElementById('gameContainer');
+    let trigger = false;
+    let msg1 = "", msg2 = "", color = "";
+
+    if (score >= 150 && lastMilestone < 150) {
+        lastMilestone = 150; trigger = true;
+        playSound('m150'); baseSpeed += 1.5;
+        msg1 = "⚡ 150分達成 ⚡"; msg2 = "極限模式！殭屍巨大化！"; color = "#FF00FF";
+    } else if (score >= 100 && lastMilestone < 100) {
+        lastMilestone = 100; trigger = true;
+        playSound('m100'); baseSpeed += 1;
+        msg1 = "🔥 100分達成 🔥"; msg2 = "殭屍進化變大了！"; color = "#FF4444";
+    } else if (score >= 50 && lastMilestone < 50) {
+        lastMilestone = 50; trigger = true;
+        playSound('m50'); baseSpeed += 1;
+        msg1 = "🌟 50分達成 🌟"; msg2 = "速度加快囉！"; color = "#00D2FF";
+    }
+
+    if (trigger) {
+        // 觸發畫面震動
+        container.classList.remove('shake-active');
+        void container.offsetWidth; // 強制重繪以重啟動畫
+        container.classList.add('shake-active');
+        
+        // 觸發巨大文字
+        particles.push({ x: width/2, y: height/2 - 30, text: msg1, life: 80, isCenter: true, color: color });
+        particles.push({ x: width/2, y: height/2 + 20, text: msg2, life: 80, isCenter: true, color: '#FFFFFF', size: 24 });
+    }
 }
 
 function newQuestion() {
     currentQ = vocabList[Math.floor(Math.random() * vocabList.length)];
     gameMode = Math.floor(Math.random() * 3);
-    document.getElementById('qMain').innerText = gameMode === 0 ? currentQ.hanzi : (gameMode === 1 ? currentQ.pinyin : currentQ.emoji);
-    document.getElementById('qSub').innerText = gameMode === 0 ? currentQ.pinyin : "";
+    const m = document.getElementById('qMain'), s = document.getElementById('qSub');
+    if (gameMode === 0) { m.innerText = currentQ.hanzi; s.innerText = currentQ.pinyin; }
+    else if (gameMode === 1) { m.innerText = currentQ.pinyin; s.innerText = ""; }
+    else { m.innerText = currentQ.emoji; s.innerText = ""; }
+
+    particles.push({ x: width/2, y: height/2, text: "✨ 尋找目標 ✨", life: 50, isCenter: true, color: '#FFD700' });
+    spawnTimer = -200; 
 }
 
-/** 核心修正：里程碑與難度加成 **/
-function checkMilestones() {
-    if (currentMilestoneIdx < milestones.length && score >= milestones[currentMilestoneIdx]) {
-        let pts = milestones[currentMilestoneIdx];
-        currentMilestoneIdx++;
-        
-        // 1. 全螢幕震動
-        const container = document.getElementById('gameContainer');
-        container.classList.add('shake-active');
-        setTimeout(() => container.classList.remove('shake-active'), 500);
+function spawnWordGroup() {
+    let correctLane = Math.floor(Math.random() * 3);
+    entities.push({ type:'food', data: currentQ, isCorrect: true, lane: correctLane, y: -60, size: player.size });
 
-        // 2. 顯示彩色恭喜 UI
-        const pop = document.getElementById('milestonePop');
-        const title = document.getElementById('popTitle');
-        const desc = document.getElementById('popDesc');
+    if (Math.random() > 0.2) {
+        let wrongLane = (correctLane + 1 + Math.floor(Math.random() * 2)) % 3;
+        let wrongList = vocabList.filter(v => v.hanzi !== currentQ.hanzi);
+        let wrongData = wrongList[Math.floor(Math.random() * wrongList.length)];
         
-        pop.classList.add('show');
-        playEffect(440, 0.6, 'square'); // 升級音效
-        
-        if (pts === 30) {
-            title.innerText = "初試身手！"; title.style.color = "#00FF00";
-            desc.innerText = "難度：速度提升 20%！";
-            baseSpeed *= 1.2;
-        } else if (pts === 50) {
-            title.innerText = "超級厲害！"; title.style.color = "#FFD700";
-            desc.innerText = "難度：殭屍體積變大！";
-            baseSpeed *= 1.1;
-        } else if (pts === 100) {
-            title.innerText = "超市達人！"; title.style.color = "#FF4444";
-            desc.innerText = "警告：紅眼巨型殭屍出沒！";
-            baseSpeed *= 1.2;
-        } else if (pts === 150) {
-            title.innerText = "巔峰戰士！"; title.style.color = "#BF40BF";
-            desc.innerText = "瘋狂難度：物體掉落加速！";
-            baseSpeed *= 1.3;
-        }
-
-        setTimeout(() => pop.classList.remove('show'), 2000);
-        speak("太棒了！");
+        entities.push({ type:'food', data: wrongData, isCorrect: false, lane: wrongLane, y: -60, size: player.size });
     }
 }
 
 function spawn() {
-    if (Math.random() < 0.02) {
-        let type = Math.random();
-        let lane = Math.floor(Math.random() * 3);
+    spawnTimer += speed;
+    if (spawnTimer > 400) {
+        spawnTimer = 0;
+        let r = Math.random();
         
-        // 難度加成影響殭屍尺寸
-        let zScale = 1;
-        if (score >= 50) zScale = 1.5;
-        if (score >= 100) zScale = 2.2;
-        if (score >= 150) zScale = 2.8;
-
-        if (type < 0.4) { // 殭屍
-            let emoji = score >= 100 ? "👹" : "🧟";
-            entities.push({ type: 'zombie', emoji, lane, y: -50, size: player.size * zScale });
-        } else { // 單字群組
-            let correctLane = Math.floor(Math.random() * 3);
-            entities.push({ type: 'food', data: currentQ, isCorrect: true, lane: correctLane, y: -50, size: player.size });
+        let zombieProb = 0.35 + (score / 1500); 
+        
+        if (r < zombieProb) {
+            // 修改：根據里程碑決定殭屍大小
+            let zScale = 1.2;
+            if (lastMilestone >= 100) zScale = 1.5; // 100分變大
+            if (lastMilestone >= 150) zScale = 1.8; // 150分巨大化
             
-            // 150分後一定會有干擾物
-            let distractorProb = score >= 150 ? 1 : 0.7;
-            if (Math.random() < distractorProb) {
-                let wrongLane = (correctLane + 1 + Math.floor(Math.random() * 2)) % 3;
-                let wrong = vocabList.filter(v => v.hanzi !== currentQ.hanzi)[Math.floor(Math.random()*(vocabList.length-1))];
-                entities.push({ type: 'food', data: wrong, isCorrect: false, lane: wrongLane, y: -50, size: player.size });
-            }
+            let zSize = player.size * zScale;
+            let zEmoji = zScale >= 1.5 ? '🧟' : '🧟‍♀️'; 
+            
+            entities.push({ type: 'zombie', emoji: zEmoji, lane: Math.floor(Math.random()*3), y: -100, size: zSize });
+        } else if (r < zombieProb + 0.1) {
+            entities.push({ type: 'item', pType: Math.random()>0.5?'shield':'magnet', lane: Math.floor(Math.random()*3), y: -60, size: player.size*0.8 });
+        } else {
+            spawnWordGroup();
         }
     }
 }
 
 function update() {
     if (gameState !== 'playing') return;
+    
+    // 修改：速度結合 baseSpeed (里程碑提升) 與平滑提升
+    speed = baseSpeed + (score / 250); 
     spawn();
+    
+    if (player.magnetTimer > 0) player.magnetTimer--;
+
     for (let i = entities.length - 1; i >= 0; i--) {
         let e = entities[i];
-        e.y += baseSpeed;
+        e.y += speed;
+        
+        if (player.magnetTimer > 0 && e.type === 'food' && e.isCorrect) {
+            if (e.lane < player.lane) e.lane += 0.05;
+            if (e.lane > player.lane) e.lane -= 0.05;
+        }
         
         let px = player.lane * laneWidth + laneWidth/2;
         let ex = e.lane * laneWidth + laneWidth/2;
-        let dist = Math.hypot(px - ex, player.y - e.y);
         
-        if (dist < (player.size + e.size) * 0.45) {
-            if (e.type === 'food' && e.isCorrect) {
-                score += 10;
-                document.getElementById('score').innerText = score;
-                playEffect(600, 0.1);
-                speak(currentQ.hanzi);
-                checkMilestones(); // 檢查是否達到 30, 50, 100, 150
-                newQuestion();
-            } else { // 撞到殭屍或錯字
-                lives--;
-                document.getElementById('lives').innerText = '❤️'.repeat(lives) + '🖤'.repeat(5-lives);
-                playEffect(150, 0.3, 'sawtooth');
-                flash('red');
-                if (lives <= 0) {
-                    gameState = 'over';
-                    document.getElementById('gameOverScreen').classList.remove('hidden');
-                    document.getElementById('finalScore').innerText = `最終得分: ${score}`;
-                    speak("遊戲結束");
+        let hitRadius = (player.size + e.size) * 0.4;
+        
+        if (Math.hypot(px - ex, player.y - e.y) < hitRadius) {
+            if (e.type === 'zombie' || (e.type === 'food' && !e.isCorrect)) {
+                if (player.shield) { 
+                    player.shield = false; flash('blue'); 
+                } else { 
+                    lives--; playSound('hit'); flash('red');
+                    document.getElementById('lives').innerText = '❤️'.repeat(lives) + '🖤'.repeat(5-lives);
+                    if (lives <= 0) {
+                        gameState = 'over';
+                        speakWord("遊戲結束", true);
+                        document.getElementById('gameOverScreen').classList.remove('hidden');
+                        document.getElementById('finalScore').innerText = `最終得分: ${score}`;
+                    }
                 }
+            } else if (e.type === 'food' && e.isCorrect) {
+                score += 10; 
+                playSound('correct'); 
+                speakWord(currentQ.hanzi);
+                
+                particles.push({ x: px, y: player.y, text: "太棒了！", life: 30, color: '#0F0' });
+                document.getElementById('score').innerText = score;
+                
+                checkMilestone(); // 觸發里程碑檢查
+                newQuestion();
+            } else if (e.type === 'item') {
+                if (e.pType === 'shield') player.shield = true;
+                else player.magnetTimer = 480;
             }
-            entities.splice(i, 1);
-        } else if (e.y > height + 100) {
-            entities.splice(i, 1);
+            entities.splice(i, 1); continue;
         }
+        if (e.y > height + 100) entities.splice(i, 1);
     }
+    particles.forEach((p, i) => { p.y -= p.isCenter?0.5:2; p.life--; if(p.life <= 0) particles.splice(i,1); });
+    
+    let sHTML = "";
+    if (player.shield) sHTML += `<span class="status-tag" style="background:rgba(0,210,255,0.3); border:1px solid cyan; padding:2px 8px; border-radius:10px; color:white;">🛡️ 護盾</span>`;
+    if (player.magnetTimer > 0) sHTML += `<span class="status-tag" style="background:rgba(255,215,0,0.3); border:1px solid gold; padding:2px 8px; border-radius:10px; color:white; margin-left:5px;">🧲 ${Math.ceil(player.magnetTimer/60)}s</span>`;
+    document.getElementById('statusIcons').innerHTML = sHTML;
 }
 
 function draw() {
-    ctx.clearRect(0,0,width,height);
-    // 背景線
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = '#222'; ctx.fillRect(0,0,width,height);
     ctx.strokeStyle = '#333';
     for(let i=1; i<3; i++) { ctx.beginPath(); ctx.moveTo(i*laneWidth, 0); ctx.lineTo(i*laneWidth, height); ctx.stroke(); }
 
     entities.forEach(e => {
         let ex = e.lane * laneWidth + laneWidth/2;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle'; 
+        
         if (e.type === 'zombie') {
             ctx.font = `${e.size}px serif`;
             ctx.fillText(e.emoji, ex, e.y);
+        } else if (e.type === 'item') {
+            ctx.font = `${e.size}px serif`;
+            ctx.fillText(e.pType === 'shield' ? '🛡️' : '🧲', ex, e.y);
         } else {
-            // 單字顯示
-            if (gameMode === 2) { // 題目是Emoji，掉落物顯示漢字
-                ctx.fillStyle = '#FFF'; ctx.font = `bold ${e.size*0.4}px sans-serif`;
+            if (gameMode === 2) {
+                ctx.fillStyle = '#FFF'; ctx.font = `bold ${e.size*0.45}px sans-serif`;
                 ctx.fillText(e.data.hanzi, ex, e.y);
             } else {
                 ctx.font = `${e.size}px serif`;
@@ -305,17 +372,30 @@ function draw() {
     });
 
     let px = player.lane * laneWidth + laneWidth/2;
+    ctx.textBaseline = 'middle';
+    if (player.shield) {
+        ctx.beginPath(); ctx.arc(px, player.y, player.size*0.7, 0, Math.PI*2);
+        ctx.strokeStyle = 'cyan'; ctx.lineWidth = 3; ctx.stroke();
+    }
     ctx.font = `${player.size}px serif`;
     ctx.fillText('🏃', px, player.y);
+    
+    particles.forEach(p => { 
+        // 修改：支援自定義顏色與字體大小
+        ctx.fillStyle = p.color || (p.isCenter ? '#FFD700' : '#0F0');
+        let fontSize = p.size || (p.isCenter ? 32 : 25);
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.fillText(p.text, p.x, p.y);
+    });
 }
 
-function flash(c) {
+function flash(color) {
     const f = document.getElementById('flash');
-    f.style.background = c; f.style.opacity = 0.5;
-    setTimeout(() => f.style.opacity = 0, 150);
+    f.style.background = color; f.style.opacity = 0.5;
+    setTimeout(() => f.style.opacity = 0, 100);
 }
 
-function loop() { update(); draw(); requestAnimationFrame(loop); }
+function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
 init();
 </script>
 </body>
