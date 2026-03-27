@@ -5,11 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>超市生存：華語單字大挑戰 終極教學版</title>
     <style>
-        :root { --gold: #FFD700; --red: #FF4444; --blue: #00D2FF; }
+        :root { --gold: #FFD700; --red: #FF4444; --blue: #00D2FF; --purple: #BF40BF; }
         body { margin: 0; background: #111; overflow: hidden; font-family: sans-serif; touch-action: none; }
         #gameContainer { position: relative; width: 100vw; height: 100vh; max-width: 500px; margin: 0 auto; background: #222; overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
         canvas { display: block; width: 100%; height: 100%; }
         
+        /* 震動動畫 */
+        .shake { animation: shake 0.4s; }
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            100% { transform: translate(0px, 0px) rotate(0deg); }
+        }
+
         #uiLayer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         .stats { display: flex; justify-content: space-between; padding: 15px; color: white; font-size: 20px; font-weight: bold; text-shadow: 2px 2px 4px #000; }
         
@@ -49,7 +62,7 @@
     <div id="startScreen" class="overlay">
         <h1 style="font-size: 45px; color: var(--red); margin-bottom: 0;">🧟 殭屍超市</h1>
         <h2 style="margin-top: 0; font-size: 18px;">華語初級詞彙生存戰</h2>
-        <p style="padding: 0 40px; line-height: 1.6;">閃避殭屍！<br>注意：畫面上會有<b>錯誤單字</b>干擾！<br>請確實選擇正確的目標！</p>
+        <p style="padding: 0 40px; line-height: 1.6;">閃避殭屍！<br>注意：畫面上會有<b>錯誤單字</b>干擾！<br>挑戰高分，開啟不同難度模式！</p>
         <button id="startBtn">進入超市</button>
     </div>
 
@@ -96,11 +109,17 @@ function playSound(type) {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.connect(gain); gain.connect(audioCtx.destination);
+    
     if (type === 'correct') {
         osc.frequency.setValueAtTime(523, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1);
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
         osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+    } else if (type === 'milestone') {
+        osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1320, audioCtx.currentTime + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.5);
     } else if (type === 'hit') {
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(150, audioCtx.currentTime);
@@ -112,7 +131,7 @@ function playSound(type) {
 /** 遊戲核心 **/
 let canvas, ctx, width, height, laneWidth;
 let gameState = 'start', score = 0, lives = 5, speed = 5, spawnTimer = 0;
-let currentQ = null, gameMode = 0;
+let currentQ = null, gameMode = 0, nextMilestone = 50;
 let player = { lane: 1, y: 0, size: 50, shield: false, magnetTimer: 0 };
 let entities = [], particles = [];
 
@@ -149,7 +168,7 @@ function resize() {
 function move(dir) { player.lane = Math.max(0, Math.min(2, player.lane + dir)); }
 
 function startGame() {
-    score = 0; lives = 5; speed = 4; entities = []; particles = [];
+    score = 0; lives = 5; speed = 4; entities = []; particles = []; nextMilestone = 50;
     player.lane = 1; player.shield = false; player.magnetTimer = 0;
     document.getElementById('lives').innerText = '❤️'.repeat(5);
     document.getElementById('score').innerText = score;
@@ -157,7 +176,7 @@ function startGame() {
     document.getElementById('questionBox').classList.remove('hidden');
     gameState = 'playing';
     
-    speakWord("遊戲開始", true); // 確保開局清空之前的語音殘留
+    speakWord("遊戲開始", true);
     newQuestion();
 }
 
@@ -170,34 +189,56 @@ function newQuestion() {
     else { m.innerText = currentQ.emoji; s.innerText = ""; }
 
     particles.push({ x: width/2, y: height/2, text: "✨ 尋找目標 ✨", life: 50, isCenter: true });
-    spawnTimer = -200; // 延遲生成，給玩家思考時間
+    spawnTimer = -200; 
+}
+
+/** 里程碑恭喜機制 **/
+function triggerMilestone(pts) {
+    playSound('milestone');
+    flash('gold');
+    // 畫面震動
+    const container = document.getElementById('gameContainer');
+    container.classList.add('shake');
+    setTimeout(() => container.classList.remove('shake'), 400);
+
+    let msg = "";
+    if (pts === 50) msg = "🚀 進入：加速模式！";
+    if (pts === 100) msg = "👹 警告：巨型殭屍入侵！";
+    if (pts === 150) msg = "🔥 終極生存挑戰！";
+    
+    particles.push({ x: width/2, y: height/2 - 50, text: msg, life: 100, isCenter: true, color: '#00D2FF' });
+    speakWord("太強了！繼續加油");
 }
 
 function spawnWordGroup() {
     let correctLane = Math.floor(Math.random() * 3);
     entities.push({ type:'food', data: currentQ, isCorrect: true, lane: correctLane, y: -60, size: player.size });
 
-    if (Math.random() > 0.2) {
+    // 隨分數提升干擾機率
+    let distractorProb = score >= 150 ? 0.95 : 0.8;
+    if (Math.random() < distractorProb) {
         let wrongLane = (correctLane + 1 + Math.floor(Math.random() * 2)) % 3;
         let wrongList = vocabList.filter(v => v.hanzi !== currentQ.hanzi);
         let wrongData = wrongList[Math.floor(Math.random() * wrongList.length)];
-        
         entities.push({ type:'food', data: wrongData, isCorrect: false, lane: wrongLane, y: -60, size: player.size });
     }
 }
 
 function spawn() {
     spawnTimer += speed;
-    if (spawnTimer > 400) {
+    let spawnGap = score >= 150 ? 320 : 400; // 150分後物體更密集
+    
+    if (spawnTimer > spawnGap) {
         spawnTimer = 0;
         let r = Math.random();
-        
         let zombieProb = 0.35 + (score / 1500); 
         
         if (r < zombieProb) {
-            let scaleMultiplier = Math.min(2.5, 1 + Math.floor(score / 40) * 0.15);
+            // 殭屍尺寸隨里程碑劇烈變化
+            let baseScale = 1 + Math.floor(score / 50) * 0.3;
+            let scaleMultiplier = Math.min(2.8, baseScale);
             let zSize = player.size * 1.2 * scaleMultiplier;
-            let zEmoji = scaleMultiplier > 1.5 ? '🧟' : '🧟‍♀️'; 
+            let zEmoji = scaleMultiplier > 1.8 ? '👹' : (scaleMultiplier > 1.3 ? '🧟' : '🧟‍♀️'); 
             
             entities.push({ type: 'zombie', emoji: zEmoji, lane: Math.floor(Math.random()*3), y: -100, size: zSize });
         } else if (r < zombieProb + 0.1) {
@@ -210,7 +251,7 @@ function spawn() {
 
 function update() {
     if (gameState !== 'playing') return;
-    speed = 4 + (score / 200); 
+    speed = 4.5 + (score / 180); // 稍微調快基礎斜率
     spawn();
     
     if (player.magnetTimer > 0) player.magnetTimer--;
@@ -226,8 +267,7 @@ function update() {
         
         let px = player.lane * laneWidth + laneWidth/2;
         let ex = e.lane * laneWidth + laneWidth/2;
-        
-        let hitRadius = (player.size + e.size) * 0.4;
+        let hitRadius = (player.size + e.size) * 0.42;
         
         if (Math.hypot(px - ex, player.y - e.y) < hitRadius) {
             if (e.type === 'zombie' || (e.type === 'food' && !e.isCorrect)) {
@@ -245,11 +285,16 @@ function update() {
                 }
             } else if (e.type === 'food' && e.isCorrect) {
                 score += 10; 
-                playSound('correct'); 
                 
-                // 只有在答對時，才會觸發語音朗讀該生詞，加深印象！
+                // 檢查里程碑
+                if (score >= nextMilestone) {
+                    triggerMilestone(nextMilestone);
+                    nextMilestone += 50;
+                } else {
+                    playSound('correct'); 
+                }
+                
                 speakWord(currentQ.hanzi);
-                
                 particles.push({ x: px, y: player.y, text: "太棒了！", life: 30 });
                 document.getElementById('score').innerText = score;
                 newQuestion();
@@ -261,12 +306,7 @@ function update() {
         }
         if (e.y > height + 100) entities.splice(i, 1);
     }
-    particles.forEach((p, i) => { p.y -= p.isCenter?0.5:2; p.life--; if(p.life <= 0) particles.splice(i,1); });
-    
-    let sHTML = "";
-    if (player.shield) sHTML += `<span class="status-tag">🛡️ 護盾</span>`;
-    if (player.magnetTimer > 0) sHTML += `<span class="status-tag" style="border-color:cyan">🧲 ${Math.ceil(player.magnetTimer/60)}s</span>`;
-    document.getElementById('statusIcons').innerHTML = sHTML;
+    particles.forEach((p, i) => { p.y -= p.isCenter?0.2:2; p.life--; if(p.life <= 0) particles.splice(i,1); });
 }
 
 function draw() {
@@ -277,8 +317,7 @@ function draw() {
 
     entities.forEach(e => {
         let ex = e.lane * laneWidth + laneWidth/2;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle'; 
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; 
         
         if (e.type === 'zombie') {
             ctx.font = `${e.size}px serif`;
@@ -307,8 +346,8 @@ function draw() {
     ctx.fillText('🏃', px, player.y);
     
     particles.forEach(p => { 
-        ctx.fillStyle = p.isCenter?'#FFD700':'#0F0';
-        ctx.font = p.isCenter?'bold 36px sans-serif':'bold 25px sans-serif';
+        ctx.fillStyle = p.color || (p.isCenter?'#FFD700':'#0F0');
+        ctx.font = p.isCenter?'bold 32px sans-serif':'bold 25px sans-serif';
         ctx.fillText(p.text, p.x, p.y);
     });
 }
