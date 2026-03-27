@@ -105,7 +105,6 @@ function speakWord(text, clearQueue = false) {
     }
 }
 
-// 修改音效函數：加入勝利掌聲
 function playSound(type) {
     if (!audioCtx) return;
     const osc = audioCtx.createOscillator();
@@ -118,7 +117,7 @@ function playSound(type) {
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
         osc.start(); osc.stop(audioCtx.currentTime + 0.2);
     } else if (type === 'win') {
-        // 原本的勝利音效
+        // 1. 勝利音效 (升調)
         [523, 659, 784, 1046, 1318].forEach((f, i) => {
             const o = audioCtx.createOscillator();
             const g = audioCtx.createGain();
@@ -129,21 +128,22 @@ function playSound(type) {
             o.start(audioCtx.currentTime + i*0.1); o.stop(audioCtx.currentTime + i*0.1 + 0.5);
         });
         
-        // 模擬群眾掌聲歡呼 (白噪音 + 低通濾波器)
-        const bufferSize = audioCtx.sampleRate * 3; // 3秒長度
+        // 2. 模擬群眾歡呼掌聲 (強化版)
+        const bufferSize = audioCtx.sampleRate * 4; 
         const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
         const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) { data[i] = (Math.random() * 2 - 1) * 0.7; }
+        for (let i = 0; i < bufferSize; i++) { data[i] = (Math.random() * 2 - 1); }
         
         const noise = audioCtx.createBufferSource();
         noise.buffer = buffer;
         const filter = audioCtx.createBiquadFilter();
         filter.type = 'lowpass';
-        filter.frequency.value = 1000; // 悶一點的聲音像遠處掌聲
+        filter.frequency.value = 1200; // 調整頻率讓聲音更像群眾
+        
         const noiseGain = audioCtx.createGain();
         noiseGain.gain.setValueAtTime(0, audioCtx.currentTime);
-        noiseGain.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.5); // 歡呼漸強
-        noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 3); // 漸弱
+        noiseGain.gain.linearRampToValueAtTime(1.5, audioCtx.currentTime + 0.5); // 掌聲迅速變大
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 4); // 掌聲漸弱
         
         noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(audioCtx.destination);
         noise.start();
@@ -211,7 +211,6 @@ function startGame() {
     newQuestion();
 }
 
-// 修改里程碑判定：確實套用階段屬性
 function checkMilestone() {
     if (score >= 200) {
         gameState = 'win';
@@ -232,7 +231,7 @@ function checkMilestone() {
         msg1 = "🔥 100分達成 🔥"; msg2 = "殭屍變多了！"; color = "#FF4444";
     } else if (score >= 50 && lastMilestone < 50) {
         lastMilestone = 50; trigger = true;
-        baseSpeed += 1.5; // 50分：真正加快基礎速度
+        baseSpeed += 1.5; 
         msg1 = "🌟 50分達成 🌟"; msg2 = "速度加快囉！"; color = "#00D2FF";
     }
 
@@ -256,7 +255,6 @@ function newQuestion() {
     spawnTimer = -player.size * 2; 
 }
 
-// 修改生成機制：與里程碑嚴格連動
 function spawn() {
     if(gameState !== 'playing') return;
     spawnTimer += speed;
@@ -266,18 +264,26 @@ function spawn() {
         spawnTimer = 0; 
         let r = Math.random();
         
-        // 100分後：殭屍出現的基本機率直接大幅提升
         let zombieProb = 0.3 + (lastMilestone >= 100 ? 0.3 : 0); 
         let lanes = [0, 1, 2].sort(() => Math.random() - 0.5);
 
         if (r < zombieProb) {
-            // 100分後：一次出現2隻殭屍封路的機率超高
             let numZombies = (lastMilestone >= 100 && Math.random() > 0.4) ? 2 : 1; 
             for(let i=0; i<numZombies; i++) {
-                // 150分後：殭屍體型放大至1.8倍！超級大！
                 let zScale = lastMilestone >= 150 ? 1.8 : 1.1;
                 entities.push({ type: 'zombie', emoji: zScale > 1.2 ? '🧟' : '🧟‍♀️', lane: lanes[i], y: -100, size: player.size * zScale });
             }
+        // 👇 補上道具生成的機率 (10% 機率掉落護盾或磁鐵)
+        } else if (Math.random() < 0.1) {
+            let isShield = Math.random() > 0.5;
+            entities.push({ 
+                type: 'item', 
+                pType: isShield ? 'shield' : 'magnet', 
+                emoji: isShield ? '🛡️' : '🧲', 
+                lane: lanes[0], 
+                y: -60, 
+                size: player.size * 0.8 
+            });
         } else {
             let qTarget = currentQ.hanzi;
             entities.push({ type:'food', hanzi: qTarget, emoji: currentQ.emoji, isCorrect: true, lane: lanes[0], y: -60, size: player.size });
@@ -292,7 +298,7 @@ function spawn() {
 
 function update() {
     if (gameState === 'win') {
-        player.y -= 10; // 勝利衝刺
+        player.y -= 10; 
         particles.push({ x: Math.random()*width, y: height, text: '✨', life: 20, color: '#FFD700' });
         return;
     }
@@ -356,7 +362,9 @@ function draw() {
     entities.forEach(e => {
         let ex = e.lane * laneWidth + laneWidth/2;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; 
-        if (e.type === 'zombie') {
+        
+        // 👇 補上道具繪製邏輯
+        if (e.type === 'zombie' || e.type === 'item') {
             ctx.font = `${e.size}px serif`; ctx.fillText(e.emoji, ex, e.y);
         } else if (e.type === 'food') {
             if (gameMode === 2) {
