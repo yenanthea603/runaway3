@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>超市生存：華語單字大挑戰 教學強化版</title>
+    <title>超市生存：華語單字大挑戰 終極教學版</title>
     <style>
         :root { --gold: #FFD700; --red: #FF4444; --blue: #00D2FF; }
         body { margin: 0; background: #111; overflow: hidden; font-family: sans-serif; touch-action: none; }
@@ -48,7 +48,7 @@
 
     <div id="startScreen" class="overlay">
         <h1 style="font-size: 45px; color: var(--red); margin-bottom: 0;">🧟 殭屍超市</h1>
-        <h2 style="margin-top: 0; font-size: 18px;">華語中級詞彙生存戰</h2>
+        <h2 style="margin-top: 0; font-size: 18px;">華語初級詞彙生存戰</h2>
         <p style="padding: 0 40px; line-height: 1.6;">閃避殭屍！<br>注意：畫面上會有<b>錯誤單字</b>干擾！<br>請確實選擇正確的目標！</p>
         <button id="startBtn">進入超市</button>
     </div>
@@ -81,10 +81,9 @@ function initAudio() {
     } catch(e) { console.log("Audio API not supported"); }
 }
 
-/** 修改 1：移除強制 cancel()，讓語音可以依序排隊朗讀 **/
 function speakWord(text, clearQueue = false) {
     if ('speechSynthesis' in window) {
-        if (clearQueue) window.speechSynthesis.cancel(); // 只有在遊戲重置時才清空佇列
+        if (clearQueue) window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'zh-TW';
         utterance.rate = 0.85;
@@ -158,7 +157,7 @@ function startGame() {
     document.getElementById('questionBox').classList.remove('hidden');
     gameState = 'playing';
     
-    speakWord("遊戲開始", true); // 清空之前的語音殘留
+    speakWord("遊戲開始", true); // 確保開局清空之前的語音殘留
     newQuestion();
 }
 
@@ -172,23 +171,14 @@ function newQuestion() {
 
     particles.push({ x: width/2, y: height/2, text: "✨ 尋找目標 ✨", life: 50, isCenter: true });
     spawnTimer = -200; // 延遲生成，給玩家思考時間
-    
-    // 朗讀新題目
-    speakWord(currentQ.hanzi);
 }
 
-/** 修改 3：產生選擇題群組 (強制包含正確與錯誤單字) **/
 function spawnWordGroup() {
-    // 隨機決定正確答案在哪一條路徑
     let correctLane = Math.floor(Math.random() * 3);
     entities.push({ type:'food', data: currentQ, isCorrect: true, lane: correctLane, y: -60, size: player.size });
 
-    // 產生干擾物 (錯誤單字)：高達 80% 的機率會在其他路徑同時產生一個錯誤單字
     if (Math.random() > 0.2) {
-        // 確保干擾物不在正確的路徑上
         let wrongLane = (correctLane + 1 + Math.floor(Math.random() * 2)) % 3;
-        
-        // 從題庫中篩選出「非目前正確答案」的單字作為干擾
         let wrongList = vocabList.filter(v => v.hanzi !== currentQ.hanzi);
         let wrongData = wrongList[Math.floor(Math.random() * wrongList.length)];
         
@@ -202,21 +192,17 @@ function spawn() {
         spawnTimer = 0;
         let r = Math.random();
         
-        // 殭屍機率
-        let zombieProb = 0.35 + (score / 1500); // 隨分數微幅提升
+        let zombieProb = 0.35 + (score / 1500); 
         
         if (r < zombieProb) {
-            /** 修改 2：殭屍隨分數變大 **/
-            // 每 40 分，殭屍尺寸倍率增加 0.15，最大放大至 2.5 倍
             let scaleMultiplier = Math.min(2.5, 1 + Math.floor(score / 40) * 0.15);
             let zSize = player.size * 1.2 * scaleMultiplier;
-            let zEmoji = scaleMultiplier > 1.5 ? '🧟' : '🧟‍♀️'; // 變大後改用不同 Emoji
+            let zEmoji = scaleMultiplier > 1.5 ? '🧟' : '🧟‍♀️'; 
             
             entities.push({ type: 'zombie', emoji: zEmoji, lane: Math.floor(Math.random()*3), y: -100, size: zSize });
         } else if (r < zombieProb + 0.1) {
             entities.push({ type: 'item', pType: Math.random()>0.5?'shield':'magnet', lane: Math.floor(Math.random()*3), y: -60, size: player.size*0.8 });
         } else {
-            // 呼叫全新的產出機制 (正確與錯誤並存)
             spawnWordGroup();
         }
     }
@@ -224,7 +210,7 @@ function spawn() {
 
 function update() {
     if (gameState !== 'playing') return;
-    speed = 4 + (score / 200); // 隨分數提升基礎掉落速度
+    speed = 4 + (score / 200); 
     spawn();
     
     if (player.magnetTimer > 0) player.magnetTimer--;
@@ -241,7 +227,6 @@ function update() {
         let px = player.lane * laneWidth + laneWidth/2;
         let ex = e.lane * laneWidth + laneWidth/2;
         
-        // 碰撞偵測 (依照實體大小動態調整碰撞半徑)
         let hitRadius = (player.size + e.size) * 0.4;
         
         if (Math.hypot(px - ex, player.y - e.y) < hitRadius) {
@@ -262,7 +247,7 @@ function update() {
                 score += 10; 
                 playSound('correct'); 
                 
-                // 朗讀剛吃到的單字，然後換題朗讀新單字
+                // 只有在答對時，才會觸發語音朗讀該生詞，加深印象！
                 speakWord(currentQ.hanzi);
                 
                 particles.push({ x: px, y: player.y, text: "太棒了！", life: 30 });
@@ -293,7 +278,7 @@ function draw() {
     entities.forEach(e => {
         let ex = e.lane * laneWidth + laneWidth/2;
         ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle'; // 讓圖案繪製基準在中心，確保碰撞判定準確
+        ctx.textBaseline = 'middle'; 
         
         if (e.type === 'zombie') {
             ctx.font = `${e.size}px serif`;
