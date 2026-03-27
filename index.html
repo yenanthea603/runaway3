@@ -23,7 +23,8 @@
         .q-sub { font-size: 27px; color: var(--green); display: block; min-height: 33px; }
         
         .overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; z-index: 100; pointer-events: auto; }
-        button { background: var(--red); color: white; border: none; padding: 15px 50px; font-size: 22px; border-radius: 50px; cursor: pointer; margin-top: 20px; box-shadow: 0 5px 0 #900; }
+        .how-to-play { background: rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 15px; margin: 15px 0; font-size: 14px; text-align: left; }
+        button { background: var(--red); color: white; border: none; padding: 15px 50px; font-size: 22px; border-radius: 50px; cursor: pointer; margin-top: 10px; box-shadow: 0 5px 0 #900; }
         button.win-btn { background: var(--blue); box-shadow: 0 5px 0 #0080FF; }
         button:active { transform: translateY(3px); box-shadow: none; }
         .hidden { display: none !important; }
@@ -58,7 +59,14 @@
     <div id="startScreen" class="overlay">
         <h1 style="font-size: 45px; color: var(--red); margin-bottom: 0;">🧟 殭屍超市</h1>
         <h2 style="margin-top: 0; font-size: 18px;">華語初級詞彙生存戰</h2>
-        <p style="padding: 0 40px; line-height: 1.6;">閃避殭屍！<br>目標：累積 <b>200分</b> 成功逃脫！</p>
+        
+        <div class="how-to-play">
+            <p style="margin: 5px 0;">🎯 <b>目標：</b>收集正確單字，避開殭屍</p>
+            <p style="margin: 5px 0;">🛡️ <b>護盾：</b>抵擋一次殭屍或錯誤衝擊</p>
+            <p style="margin: 5px 0;">🧲 <b>磁鐵：</b>短時間內自動吸取正確單字</p>
+        </div>
+
+        <p style="padding: 0 40px; line-height: 1.2; font-size: 14px;">目標：累積 <b>200分</b> 成功逃脫！</p>
         <button id="startBtn">進入超市</button>
     </div>
 
@@ -117,7 +125,6 @@ function playSound(type) {
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
         osc.start(); osc.stop(audioCtx.currentTime + 0.2);
     } else if (type === 'win') {
-        // 1. 勝利音效 (升調)
         [523, 659, 784, 1046, 1318].forEach((f, i) => {
             const o = audioCtx.createOscillator();
             const g = audioCtx.createGain();
@@ -128,26 +135,21 @@ function playSound(type) {
             o.start(audioCtx.currentTime + i*0.1); o.stop(audioCtx.currentTime + i*0.1 + 0.5);
         });
         
-        // 2. 模擬群眾歡呼掌聲 (強化版)
         const bufferSize = audioCtx.sampleRate * 4; 
         const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
         const data = buffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) { data[i] = (Math.random() * 2 - 1); }
-        
         const noise = audioCtx.createBufferSource();
         noise.buffer = buffer;
         const filter = audioCtx.createBiquadFilter();
         filter.type = 'lowpass';
-        filter.frequency.value = 1200; // 調整頻率讓聲音更像群眾
-        
+        filter.frequency.value = 1200; 
         const noiseGain = audioCtx.createGain();
         noiseGain.gain.setValueAtTime(0, audioCtx.currentTime);
-        noiseGain.gain.linearRampToValueAtTime(1.5, audioCtx.currentTime + 0.5); // 掌聲迅速變大
-        noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 4); // 掌聲漸弱
-        
+        noiseGain.gain.linearRampToValueAtTime(1.5, audioCtx.currentTime + 0.5);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 4); 
         noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(audioCtx.destination);
         noise.start();
-
     } else if (type === 'hit') {
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(150, audioCtx.currentTime);
@@ -159,7 +161,7 @@ function playSound(type) {
 let canvas, ctx, width, height, laneWidth;
 let gameState = 'start', score = 0, lives = 5, speed = 4, baseSpeed = 4, spawnTimer = 0;
 let currentQ = null, gameMode = 0, lastMilestone = 0;
-let player = { lane: 1, y: 0, size: 50, shield: false, magnetTimer: 0, winAnimY: 0 };
+let player = { lane: 1, y: 0, size: 50, shield: false, magnetTimer: 0 };
 let entities = [], particles = [];
 
 function init() {
@@ -167,7 +169,6 @@ function init() {
     ctx = canvas.getContext('2d');
     resize();
     window.addEventListener('resize', resize);
-    
     document.getElementById('startBtn').addEventListener('click', () => { initAudio(); startGame(); });
     document.getElementById('restartBtn').addEventListener('click', () => { startGame(); });
     document.getElementById('winRestartBtn').addEventListener('click', () => { startGame(); });
@@ -180,7 +181,6 @@ function init() {
         if(Math.abs(diff) > 30) move(diff > 0 ? 1 : -1);
         else move(e.changedTouches[0].clientX < width/2 ? -1 : 1);
     });
-
     requestAnimationFrame(gameLoop);
 }
 
@@ -219,22 +219,19 @@ function checkMilestone() {
         setTimeout(() => document.getElementById('winScreen').classList.remove('hidden'), 2000);
         return;
     }
-
     let container = document.getElementById('gameContainer');
     let trigger = false, msg1 = "", msg2 = "", color = "";
-
     if (score >= 150 && lastMilestone < 150) {
         lastMilestone = 150; trigger = true;
-        msg1 = "⚡ 150分達成 ⚡"; msg2 = "殭屍巨大化！(要真的有大)"; color = "#FF00FF";
+        msg1 = "⚡ 終極警報 ⚡"; msg2 = "殭屍全體巨大化！"; color = "#FF00FF";
     } else if (score >= 100 && lastMilestone < 100) {
         lastMilestone = 100; trigger = true;
-        msg1 = "🔥 100分達成 🔥"; msg2 = "殭屍變多了！"; color = "#FF4444";
+        msg1 = "🔥 喪屍圍城 🔥"; msg2 = "大批殭屍正在靠近！"; color = "#FF4444";
     } else if (score >= 50 && lastMilestone < 50) {
         lastMilestone = 50; trigger = true;
         baseSpeed += 1.5; 
-        msg1 = "🌟 50分達成 🌟"; msg2 = "速度加快囉！"; color = "#00D2FF";
+        msg1 = "🌟 逃亡開始 🌟"; msg2 = "速度加快了！"; color = "#00D2FF";
     }
-
     if (trigger) {
         container.classList.remove('shake-active');
         void container.offsetWidth; 
@@ -251,45 +248,31 @@ function newQuestion() {
     if (gameMode === 0) { m.innerText = currentQ.hanzi; s.innerText = currentQ.pinyin; }
     else if (gameMode === 1) { m.innerText = currentQ.pinyin; s.innerText = ""; }
     else { m.innerText = currentQ.emoji; s.innerText = ""; }
-    particles.push({ x: width/2, y: height/2, text: "✨ 下一個目標 ✨", life: 50, isCenter: true, color: '#FFD700' });
+    particles.push({ x: width/2, y: height/2, text: "✨ 尋找目標 ✨", life: 50, isCenter: true, color: '#FFD700' });
     spawnTimer = -player.size * 2; 
 }
 
 function spawn() {
     if(gameState !== 'playing') return;
     spawnTimer += speed;
-    let safeDistance = player.size * 4; 
-    
-    if (spawnTimer > safeDistance) {
+    if (spawnTimer > player.size * 4) {
         spawnTimer = 0; 
-        let r = Math.random();
-        
         let zombieProb = 0.3 + (lastMilestone >= 100 ? 0.3 : 0); 
         let lanes = [0, 1, 2].sort(() => Math.random() - 0.5);
 
-        if (r < zombieProb) {
+        if (Math.random() < zombieProb) {
             let numZombies = (lastMilestone >= 100 && Math.random() > 0.4) ? 2 : 1; 
             for(let i=0; i<numZombies; i++) {
                 let zScale = lastMilestone >= 150 ? 1.8 : 1.1;
-                entities.push({ type: 'zombie', emoji: zScale > 1.2 ? '🧟' : '🧟‍♀️', lane: lanes[i], y: -100, size: player.size * zScale });
+                entities.push({ type: 'zombie', emoji: '🧟', lane: lanes[i], y: -100, size: player.size * zScale });
             }
-        // 👇 補上道具生成的機率 (10% 機率掉落護盾或磁鐵)
         } else if (Math.random() < 0.1) {
             let isShield = Math.random() > 0.5;
-            entities.push({ 
-                type: 'item', 
-                pType: isShield ? 'shield' : 'magnet', 
-                emoji: isShield ? '🛡️' : '🧲', 
-                lane: lanes[0], 
-                y: -60, 
-                size: player.size * 0.8 
-            });
+            entities.push({ type: 'item', pType: isShield?'shield':'magnet', emoji: isShield?'🛡️':'🧲', lane: lanes[0], y: -60, size: player.size * 0.8 });
         } else {
-            let qTarget = currentQ.hanzi;
-            entities.push({ type:'food', hanzi: qTarget, emoji: currentQ.emoji, isCorrect: true, lane: lanes[0], y: -60, size: player.size });
-
+            entities.push({ type:'food', hanzi: currentQ.hanzi, emoji: currentQ.emoji, isCorrect: true, lane: lanes[0], y: -60, size: player.size });
             if (Math.random() > 0.3) {
-                let wrong = vocabList.filter(v => v.hanzi !== qTarget)[Math.floor(Math.random() * (vocabList.length-1))];
+                let wrong = vocabList.filter(v => v.hanzi !== currentQ.hanzi)[Math.floor(Math.random() * (vocabList.length-1))];
                 entities.push({ type:'food', hanzi: wrong.hanzi, emoji: wrong.emoji, isCorrect: false, lane: lanes[1], y: -60, size: player.size });
             }
         }
@@ -297,16 +280,10 @@ function spawn() {
 }
 
 function update() {
-    if (gameState === 'win') {
-        player.y -= 10; 
-        particles.push({ x: Math.random()*width, y: height, text: '✨', life: 20, color: '#FFD700' });
-        return;
-    }
+    if (gameState === 'win') { player.y -= 10; return; }
     if (gameState !== 'playing') return;
-    
     speed = baseSpeed + (score / 400); 
     spawn();
-    
     if (player.magnetTimer > 0) player.magnetTimer--;
 
     for (let i = entities.length - 1; i >= 0; i--) {
@@ -315,13 +292,16 @@ function update() {
         
         let px = player.lane * laneWidth + laneWidth/2;
         let ex = e.lane * laneWidth + laneWidth/2;
-        let hitRadius = (player.size + e.size) * 0.4;
         
-        if (Math.hypot(px - ex, player.y - e.y) < hitRadius) {
+        // 磁鐵邏輯
+        if (player.magnetTimer > 0 && e.type === 'food' && e.hanzi === currentQ.hanzi) {
+            if (e.y > height * 0.4) e.lane = player.lane;
+        }
+
+        if (Math.hypot(px - ex, player.y - e.y) < (player.size + e.size) * 0.4) {
             if (e.type === 'zombie' || (e.type === 'food' && e.hanzi !== currentQ.hanzi)) {
-                if (player.shield) { 
-                    player.shield = false; flash('blue'); 
-                } else { 
+                if (player.shield) { player.shield = false; flash('blue'); }
+                else { 
                     lives--; playSound('hit'); flash('red');
                     document.getElementById('lives').innerText = '❤️'.repeat(lives) + '🖤'.repeat(5-lives);
                     if (lives <= 0) {
@@ -331,9 +311,7 @@ function update() {
                     }
                 }
             } else if (e.type === 'food' && e.hanzi === currentQ.hanzi) {
-                score += 10; 
-                playSound('correct'); 
-                speakWord(e.hanzi);
+                score += 10; playSound('correct'); speakWord(e.hanzi);
                 particles.push({ x: px, y: player.y, text: "✓", life: 30, color: '#0F0', size: 40 });
                 document.getElementById('score').innerText = `${score} / 200`;
                 checkMilestone(); 
@@ -358,12 +336,9 @@ function draw() {
     ctx.clearRect(0, 0, width, height);
     ctx.strokeStyle = '#333';
     for(let i=1; i<3; i++) { ctx.beginPath(); ctx.moveTo(i*laneWidth, 0); ctx.lineTo(i*laneWidth, height); ctx.stroke(); }
-
     entities.forEach(e => {
         let ex = e.lane * laneWidth + laneWidth/2;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; 
-        
-        // 👇 補上道具繪製邏輯
         if (e.type === 'zombie' || e.type === 'item') {
             ctx.font = `${e.size}px serif`; ctx.fillText(e.emoji, ex, e.y);
         } else if (e.type === 'food') {
@@ -371,12 +346,10 @@ function draw() {
                 ctx.fillStyle = '#FFF'; ctx.font = `bold ${e.size*0.45}px sans-serif`;
                 ctx.fillText(e.hanzi, ex, e.y);
             } else {
-                ctx.font = `${e.size}px serif`;
-                ctx.fillText(e.emoji, ex, e.y);
+                ctx.font = `${e.size}px serif`; ctx.fillText(e.emoji, ex, e.y);
             }
         }
     });
-
     let px = player.lane * laneWidth + laneWidth/2;
     if (player.shield) {
         ctx.beginPath(); ctx.arc(px, player.y, player.size*0.7, 0, Math.PI*2);
@@ -384,7 +357,6 @@ function draw() {
     }
     ctx.font = `${player.size}px serif`;
     ctx.fillText(gameState === 'win' ? '🚀' : '🏃', px, player.y);
-    
     particles.forEach(p => { 
         ctx.fillStyle = p.color || '#0F0';
         ctx.font = `bold ${p.size || (p.isCenter ? 30 : 20)}px sans-serif`;
